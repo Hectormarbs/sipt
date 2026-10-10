@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITP - Registro de Viaje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b1120; color: #94a3b8; font-family: system-ui, -apple-system, sans-serif; }
+        .top-nav { background-color: #070d19; border-bottom: 1px solid #1e293b; }
+        .card-panel { background-color: #0f172a; border: 1px solid #1e293b; }
+        .card-ruta { background-color: #111c35; border: 1px solid #1e293b; }
+        .card-ruta:hover { border-color: #3b82f6; }
+        .btn-orange { background-color: #d97706; color: #ffffff; }
+        .btn-orange:hover { background-color: #b45309; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- BARRA ADMIN / PRUEBAS -->
+    <div class="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center space-x-2 text-amber-400 font-semibold">
+            <i class="fa-solid fa-user-shield"></i>
+            <span>Panel de Pruebas Administrador</span>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <label class="flex items-center space-x-2 cursor-pointer bg-slate-900 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-300 font-bold">
+                <input type="checkbox" id="checkModoAdmin" checked class="rounded accent-amber-500">
+                <span>Omitir GPS / Marcación Ilimitada (Bypass)</span>
+            </label>
+
+            <div class="flex items-center space-x-2">
+                <a href="/" class="bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded-lg">1. Usuario</a>
+                <a href="/bus.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg transition">2. Bus</a>
+                <a href="/dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg transition">3. Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="top-nav px-6 py-3.5 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white p-2 rounded-xl">
+                <i class="fa-solid fa-bus text-base"></i>
+            </div>
+            <div>
+                <span class="text-white font-bold text-base tracking-wide block">SITP Bogotá</span>
+                <span class="text-slate-400 text-[10px]">Captura de Demanda en Tiempo Real</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3 text-slate-400">
+            <span id="fechaHora" class="font-medium">--:--</span>
+            <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-white border border-slate-700">
+                <i class="fa-solid fa-user text-xs"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <section class="card-panel p-5 sm:p-6 rounded-2xl space-y-4 shadow-lg">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 text-white p-3 rounded-2xl shadow-md shadow-blue-600/20">
+                        <i class="fa-solid fa-location-dot text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-white font-bold text-base">Tu Estación / Paradero</h2>
+                        <p class="text-xs text-slate-400">Selecciona el paradero donde te encuentras</p>
+                    </div>
+                </div>
+
+                <button onclick="detectarParaderoMasCercano()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition active:scale-95 shadow-md">
+                    <i class="fa-solid fa-crosshairs"></i>
+                    <span>Simular GPS en este Paradero</span>
+                </button>
+            </div>
+
+            <div class="relative pt-1">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-bus"></i>
+                </div>
+                <select id="selectParadero" onchange="cargarRutas()" class="w-full bg-[#070d19] border border-slate-700 text-white font-medium py-3.5 pl-11 pr-10 rounded-xl focus:outline-none focus:border-blue-500 appearance-none text-sm">
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                </div>
+            </div>
+
+            <div id="distanciaGpsInfo" class="text-xs font-medium px-1 text-emerald-400 flex items-center space-x-2">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>Modo Bypass activo: Las marcaciones se enviarán directamente al sistema.</span>
+            </div>
+        </section>
+
+        <div id="toast" class="hidden text-white font-semibold text-xs py-3.5 px-4 rounded-xl text-center shadow-lg transition"></div>
+
+        <section class="space-y-4">
+            <div class="flex items-center justify-between px-1">
+                <h3 class="text-white font-bold text-sm flex items-center space-x-2">
+                    <i class="fa-solid fa-route text-blue-500"></i>
+                    <span>¿Qué bus estás esperando?</span>
+                </h3>
+                <span id="contadorRutas" class="text-xs text-emerald-400 font-medium">● 0 rutas</span>
+            </div>
+
+            <div id="gridRutas" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </section>
+
+    </main>
+
+    <script>
+        let datosParaderos = [];
+        let posicionUsuarioGps = null;
+        let telemetriaFlota = {};
+        const TIEMPO_EXPIRACION_MS = 15 * 60 * 1000;
+        const DISTANCIA_MAXIMA_PERMITIDA_METROS = 100;
+
+        const tiemposEstimadosBase = {
+            'C124': '4 - 6 min',
+            'A305': '3 - 5 min',
+            '191': '7 - 10 min',
+            '91': '2 - 4 min',
+            'A518': '5 - 8 min',
+            'Z8': '8 - 12 min',
+            '330': '6 - 9 min',
+            '291': '5 - 7 min',
+            'T163': '3 - 6 min'
+        };
+
+        function actualizarReloj() {
+            document.getElementById('fechaHora').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        async function init() {
+            try {
+                const res = await fetch('/api/paraderos');
+                datosParaderos = await res.json();
+                const select = document.getElementById('selectParadero');
+                select.innerHTML = '';
+
+                datosParaderos.forEach(p => {
+                    select.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+                });
+
+                await consultarTelemetriaEnVivo();
+            } catch (err) {
+                console.error("Error al cargar paraderos:", err);
+            }
+        }
+
+        async function consultarTelemetriaEnVivo() {
+            try {
+                const res = await fetch('/api/bus/telemetria');
+                telemetriaFlota = await res.json();
+                cargarRutas();
+            } catch (err) {
+                console.error("Error al obtener telemetría:", err);
+            }
+        }
+
+        function calcularDistanciaMetros(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return Math.round(R * c);
+        }
+
+        function detectarParaderoMasCercano() {
+            const infoDiv = document.getElementById('distanciaGpsInfo');
+            const paraderoId = document.getElementById('selectParadero').value;
+            const paradero = datosParaderos.find(p => p.id === paraderoId);
+
+            posicionUsuarioGps = { lat: paradero.lat, lng: paradero.lng };
+            infoDiv.innerHTML = `<span class="text-emerald-400">📍 Posición simulada en <b>${paradero.nombre}</b>. Distancia: 0 m.</span>`;
+        }
+
+        function cargarRutas() {
+            const paraderoId = document.getElementById('selectParadero').value;
+            const paradero = datosParaderos.find(p => p.id === paraderoId);
+            if (!paradero) return;
+
+            const grid = document.getElementById('gridRutas');
+            grid.innerHTML = '';
+
+            document.getElementById('contadorRutas').innerText = `● ${paradero.rutas.length} servicios en esta parada`;
+
+            paradero.rutas.forEach(rutaCompleta => {
+                const partes = rutaCompleta.split(' ');
+                const codigoRuta = partes[1] || 'SITP';
+
+                // Usar telemetría en vivo enviada por el bus si existe
+                const reporteBus = telemetriaFlota[rutaCompleta];
+                const tiempoAprox = reporteBus ? reporteBus.tiempoLlegada : (tiemposEstimadosBase[codigoRuta] || '5 - 8 min');
+                const estadoTrafico = reporteBus ? reporteBus.trafico : 'Normal / Fluido';
+
+                let colorTrafico = 'text-emerald-400';
+                if (estadoTrafico.includes('Moderado')) colorTrafico = 'text-amber-400';
+                if (estadoTrafico.includes('Congestionado') || estadoTrafico.includes('Alto')) colorTrafico = 'text-rose-400';
+
+                const rutaLimpiaParam = rutaCompleta.replace(/'/g, "\\'");
+
+                grid.innerHTML += `
+                    <div class="card-ruta p-4 rounded-2xl flex flex-col justify-between space-y-4 shadow-md transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-white text-slate-900 font-extrabold px-3 py-2 rounded-xl text-base tracking-tight shadow">
+                                    ${codigoRuta}
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-xs">${rutaCompleta}</h4>
+                                    <p class="text-[11px] text-slate-400 flex items-center space-x-1 mt-0.5">
+                                        <i class="fa-solid fa-clock text-blue-400 text-[10px]"></i>
+                                        <span>Llegada aprox: <b class="text-white">${tiempoAprox}</b></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-800/80">
+                            <span class="text-[10px] font-semibold ${colorTrafico} flex items-center space-x-1">
+                                <span class="h-2 w-2 rounded-full bg-current animate-pulse"></span>
+                                <span>Tráfico: ${estadoTrafico}</span>
+                            </span>
+                            <button onclick="registrar('${paraderoId}', '${rutaLimpiaParam}')" 
+                                class="btn-orange text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition active:scale-95 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-hand text-[11px]"></i>
+                                <span>+1 Marcar demanda</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function registrar(paraderoId, rutaNombre) {
+            const esModoAdmin = document.getElementById('checkModoAdmin').checked;
+            const paradero = datosParaderos.find(p => p.id === paraderoId);
+
+            if (!esModoAdmin) {
+                const registroPrevio = localStorage.getItem('sitp_registro_activo');
+                if (registroPrevio) {
+                    const data = JSON.parse(registroPrevio);
+                    const tiempoTranscurrido = Date.now() - data.timestamp;
+
+                    if (tiempoTranscurrido < TIEMPO_EXPIRACION_MS) {
+                        const minutosRestantes = Math.ceil((TIEMPO_EXPIRACION_MS - tiempoTranscurrido) / 60000);
+                        mostrarToast(`⚠️ Ya registraste viaje para ${data.ruta}. Reintenta en ${minutosRestantes} min.`, 'bg-amber-600');
+                        return;
+                    }
+                }
+
+                if (!posicionUsuarioGps) {
+                    mostrarToast('⚠️ Haz clic en "Simular GPS en este Paradero" o activa "Omitir GPS".', 'bg-amber-600');
+                    return;
+                }
+
+                const distanciaMetros = calcularDistanciaMetros(posicionUsuarioGps.lat, posicionUsuarioGps.lng, paradero.lat, paradero.lng);
+
+                if (distanciaMetros > DISTANCIA_MAXIMA_PERMITIDA_METROS) {
+                    mostrarToast(`🚫 Estás a ${distanciaMetros} m del paradero. Activa "Omitir GPS" para simular.`, 'bg-rose-600');
+                    return;
+                }
+            }
+
+            try {
+                const res = await fetch('/api/registrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paraderoId, ruta: rutaNombre })
+                });
+
+                if (res.ok) {
+                    if (!esModoAdmin) {
+                        const sesionUsuario = { paraderoId, ruta: rutaNombre, timestamp: Date.now() };
+                        localStorage.setItem('sitp_registro_activo', JSON.stringify(sesionUsuario));
+                    }
+                    mostrarToast(`✓ Marcación registrada para ${rutaNombre} en ${paradero.nombre}.`, 'bg-emerald-600');
+                }
+            } catch (err) {
+                alert('Error al conectar con el servidor.');
+            }
+        }
+
+        function mostrarToast(mensaje, colorClase) {
+            const toast = document.getElementById('toast');
+            toast.className = `${colorClase} text-white font-semibold text-xs py-3.5 px-4 rounded-xl text-center shadow-lg transition my-2`;
+            toast.innerText = mensaje;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        setInterval(consultarTelemetriaEnVivo, 3000);
+        init();
+    </script>
+</body>
+</html>

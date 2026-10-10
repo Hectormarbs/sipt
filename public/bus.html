@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITP - Telemetría y Panel de Bus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b1120; color: #94a3b8; font-family: system-ui, -apple-system, sans-serif; }
+        .card-panel { background-color: #0f172a; border: 1px solid #1e293b; }
+        .card-alerta { background-color: #3b0d19; border: 1px solid #991b1b; }
+        .card-normal { background-color: #111c35; border: 1px solid #1e3a8a; }
+        .btn-orange { background-color: #d97706; color: #ffffff; }
+        .btn-orange:hover { background-color: #b45309; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- BARRA ADMIN -->
+    <div class="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2 text-xs flex items-center justify-between">
+        <span class="text-amber-400 font-bold"><i class="fa-solid fa-gauge-high"></i> Terminal de Bordo del Bus</span>
+        <div class="flex items-center space-x-2">
+            <a href="/" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg">1. Usuario</a>
+            <a href="/bus.html" class="bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded-lg">2. Bus</a>
+            <a href="/dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg">3. Central</a>
+        </div>
+    </div>
+
+    <!-- Header Cabina -->
+    <header class="bg-[#070d19] border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <div class="bg-amber-600 text-white p-2.5 rounded-xl shadow-lg">
+                <i class="fa-solid fa-bus text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-white font-bold text-base">Consola del Conductor</h1>
+                <p class="text-xs text-slate-400">Alertas de Pasajeros y Telemetría en Tiempo Real</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-xl text-xs">
+                <span class="text-slate-400">Ruta Asignada:</span>
+                <select id="selectRutaBus" onchange="cargarAlertasBus()" class="bg-transparent text-white font-bold focus:outline-none">
+                    <option value="Ruta C124 (Bilbao)" class="bg-slate-900">Ruta C124 (Bilbao)</option>
+                    <option value="Ruta A305 (Est. Calle 100)" class="bg-slate-900">Ruta A305 (Est. Calle 100)</option>
+                    <option value="Ruta 91 (Bosa / Porciúncula)" class="bg-slate-900">Ruta 91 (Bosa / Porciúncula)</option>
+                    <option value="Ruta Z8 (Toberín)" class="bg-slate-900">Ruta Z8 (Toberín)</option>
+                    <option value="Ruta T163 (Perdomo)" class="bg-slate-900">Ruta T163 (Perdomo)</option>
+                    <option value="Ruta 330 (La Estrellita)" class="bg-slate-900">Ruta 330 (La Estrellita)</option>
+                </select>
+            </div>
+            <div id="relojBus" class="text-xs font-bold text-white">--:--</div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Banner de Estado de Demanda -->
+        <section id="bannerEstado" class="card-panel p-6 rounded-2xl flex items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <div id="iconBanner" class="bg-blue-600 text-white p-4 rounded-2xl">
+                    <i class="fa-solid fa-bus-simple text-2xl"></i>
+                </div>
+                <div>
+                    <span id="subtituloBanner" class="text-xs uppercase font-bold tracking-wider text-slate-400">Sincronizado</span>
+                    <h2 id="tituloBanner" class="text-white font-extrabold text-xl">Monitoreando corredores...</h2>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="text-xs text-slate-400 block">Total en tu ruta:</span>
+                <span id="totalPasajerosRuta" class="text-3xl font-black text-white">0</span>
+                <span class="text-xs text-slate-400 ml-1">pasajeros</span>
+            </div>
+        </section>
+
+        <!-- PANEL DE TELEMETRÍA Y TIEMPO ESTIMADO -->
+        <section class="card-panel p-6 rounded-2xl space-y-4">
+            <h3 class="text-white font-bold text-sm flex items-center space-x-2">
+                <i class="fa-solid fa-wifi text-amber-500"></i>
+                <span>Reporte de Operación del Conductor</span>
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 1. Estado del Tráfico -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400">Estado del Tráfico en Vía</label>
+                    <select id="selectTrafico" class="w-full bg-[#070d19] border border-slate-700 text-white text-xs font-bold py-3 px-3 rounded-xl focus:outline-none focus:border-amber-500">
+                        <option value="Normal / Fluido">🟢 Tráfico Fluido</option>
+                        <option value="Moderado">🟡 Tráfico Moderado</option>
+                        <option value="Congestionado / Alto">🔴 Tráfico Pesado</option>
+                    </select>
+                </div>
+
+                <!-- 2. Ubicación Actual / Próxima Estación -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400">Próxima Parada / Posición</label>
+                    <select id="selectUbicacionBus" class="w-full bg-[#070d19] border border-slate-700 text-white text-xs font-bold py-3 px-3 rounded-xl focus:outline-none focus:border-amber-500">
+                    </select>
+                </div>
+
+                <!-- 3. Tiempo Estimado de Llegada -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-400">Tiempo Estimado de Llegada (ETA)</label>
+                    <select id="selectTiempoLlegada" class="w-full bg-[#070d19] border border-slate-700 text-white text-xs font-bold py-3 px-3 rounded-xl focus:outline-none focus:border-amber-500">
+                        <option value="En estación">En estación (0 min)</option>
+                        <option value="2 - 4 min">2 - 4 minutos</option>
+                        <option value="5 - 8 min">5 - 8 minutos</option>
+                        <option value="10 - 15 min">10 - 15 minutos</option>
+                        <option value="Retrasado (+20 min)">Retrasado (+20 min)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button onclick="transmitirTelemetria()" class="btn-orange text-xs font-bold py-3 px-6 rounded-xl shadow-md transition active:scale-95 flex items-center space-x-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Transmitir Estado a la Central y Usuarios</span>
+                </button>
+            </div>
+        </section>
+
+        <div id="toast" class="hidden text-white font-semibold text-xs py-3.5 px-4 rounded-xl text-center shadow-lg transition"></div>
+
+        <!-- Demanda por Paradero -->
+        <section class="space-y-4">
+            <h3 class="text-white font-bold text-sm flex items-center space-x-2">
+                <i class="fa-solid fa-location-dot text-amber-500"></i>
+                <span>Demanda por Paradero</span>
+            </h3>
+            <div id="gridParaderosBus" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+    </main>
+
+    <script>
+        let paraderosGlobales = [];
+
+        function actualizarReloj() {
+            document.getElementById('relojBus').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        setInterval(actualizarReloj, 1000);
+
+        async function init() {
+            try {
+                const res = await fetch('/api/paraderos');
+                paraderosGlobales = await res.json();
+                
+                const selectUbi = document.getElementById('selectUbicacionBus');
+                selectUbi.innerHTML = '';
+                paraderosGlobales.forEach(p => {
+                    selectUbi.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
+                });
+
+                cargarAlertasBus();
+            } catch (err) {
+                console.error("Error al inicializar:", err);
+            }
+        }
+
+        async function cargarAlertasBus() {
+            try {
+                const res = await fetch('/api/demanda');
+                const data = await res.json();
+                const rutaSeleccionada = document.getElementById('selectRutaBus').value;
+                const grid = document.getElementById('gridParaderosBus');
+                grid.innerHTML = '';
+
+                let totalPasajeros = 0;
+                let hayAltaDemanda = false;
+
+                for (const [id, info] of Object.entries(data)) {
+                    const cantidadEsperando = info.rutas[rutaSeleccionada] || 0;
+                    totalPasajeros += cantidadEsperando;
+
+                    const esAlta = cantidadEsperando >= 5;
+                    if (esAlta) hayAltaDemanda = true;
+
+                    grid.innerHTML += `
+                        <div class="${esAlta ? 'card-alerta' : 'card-normal'} p-5 rounded-2xl flex items-center justify-between space-x-4 shadow-md">
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold uppercase ${esAlta ? 'text-rose-400' : 'text-slate-400'}">${info.nombre}</span>
+                                <div class="flex items-center space-x-2">
+                                    <i class="fa-solid ${esAlta ? 'fa-triangle-exclamation text-rose-500' : 'fa-users text-blue-400'} text-sm"></i>
+                                    <span class="text-xs font-semibold text-slate-200">${esAlta ? '⚠️ Detenerse: Parada Llena' : 'Flujo Regular'}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-black ${esAlta ? 'text-rose-400' : 'text-white'}">${cantidadEsperando}</span>
+                                <span class="text-[10px] text-slate-400 block">esperando</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('totalPasajerosRuta').innerText = totalPasajeros;
+                const banner = document.getElementById('bannerEstado');
+                const icon = document.getElementById('iconBanner');
+
+                if (hayAltaDemanda) {
+                    banner.className = "card-alerta p-6 rounded-2xl flex items-center justify-between gap-4 shadow-lg shadow-rose-950/50";
+                    icon.className = "bg-rose-600 text-white p-4 rounded-2xl animate-pulse";
+                    document.getElementById('subtituloBanner').innerText = "⚠️ Alta Demanda Detectada";
+                    document.getElementById('subtituloBanner').className = "text-xs uppercase font-bold text-rose-300";
+                    document.getElementById('tituloBanner').innerText = "Hay paraderos con 5 o más pasajeros esperando. Preparar parada.";
+                } else {
+                    banner.className = "card-panel p-6 rounded-2xl flex items-center justify-between gap-4";
+                    icon.className = "bg-blue-600 text-white p-4 rounded-2xl";
+                    document.getElementById('subtituloBanner').innerText = "Estado Normal";
+                    document.getElementById('subtituloBanner').className = "text-xs uppercase font-bold text-slate-400";
+                    document.getElementById('tituloBanner').innerText = "Flujo de pasajeros estable.";
+                }
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function transmitirTelemetria() {
+            const ruta = document.getElementById('selectRutaBus').value;
+            const trafico = document.getElementById('selectTrafico').value;
+            const tiempoLlegada = document.getElementById('selectTiempoLlegada').value;
+            const paraderoId = document.getElementById('selectUbicacionBus').value;
+            const paraderoObj = paraderosGlobales.find(p => p.id === paraderoId);
+
+            try {
+                const res = await fetch('/api/bus/telemetria', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ruta, trafico, tiempoLlegada, ubicacion: paraderoObj ? paraderoObj.nombre : 'En ruta' })
+                });
+
+                if (res.ok) {
+                    mostrarToast(`✓ Telemetría transmitida: ${ruta} | Tráfico: ${trafico} | ETA: ${tiempoLlegada}`, 'bg-emerald-600');
+                }
+            } catch (err) {
+                mostrarToast('Error al transmitir la telemetría al servidor.', 'bg-rose-600');
+            }
+        }
+
+        function mostrarToast(mensaje, colorClase) {
+            const toast = document.getElementById('toast');
+            toast.className = `${colorClase} text-white font-semibold text-xs py-3.5 px-4 rounded-xl text-center shadow-lg transition my-2`;
+            toast.innerText = mensaje;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        setInterval(cargarAlertasBus, 2000);
+        init();
+    </script>
+</body>
+</html>
